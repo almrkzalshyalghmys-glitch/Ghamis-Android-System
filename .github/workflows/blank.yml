@@ -7,6 +7,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,20 +27,32 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Check Android project
+      - name: Accept Android SDK licenses
         run: |
-          echo "Checking Android project files..."
+          yes | sdkmanager --licenses || true
+
+      - name: Check Android project files
+        run: |
+          echo "Checking repository files..."
           ls -la
           if [ ! -f gradlew ]; then
-            echo "ERROR: gradlew file not found."
-            echo "An Android Gradle project is required."
+            echo "ERROR: gradlew is missing."
+            echo "This repository needs a complete Android Gradle project."
+            exit 1
+          fi
+          if [ ! -f settings.gradle ] && [ ! -f settings.gradle.kts ]; then
+            echo "ERROR: Android settings.gradle file is missing."
+            exit 1
+          fi
+          if [ ! -f app/build.gradle ] && [ ! -f app/build.gradle.kts ]; then
+            echo "ERROR: app/build.gradle file is missing."
             exit 1
           fi
 
-      - name: Build APK
+      - name: Build debug APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew --no-daemon assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
