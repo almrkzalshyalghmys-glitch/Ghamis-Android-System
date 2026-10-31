@@ -1,11 +1,12 @@
 
-name: Build Ghamis Android APK
+name: Build Ghamis Lab Android APK
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+      - master
 
 permissions:
   contents: read
@@ -15,41 +16,56 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Extract lab project
+        run: |
+          unzip -q Ghamis_Lab_System_Complete_Project.zip -d .
+          test -f Ghamis_Lab_System/package.json
+          test -f Ghamis_Lab_System/capacitor.config.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
+          packages: |
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
 
-      - name: Accept Android SDK licenses
+      - name: Install dependencies
+        working-directory: Ghamis_Lab_System
+        run: npm install
+
+      - name: Prepare web assets
+        working-directory: Ghamis_Lab_System
+        run: npm run copy:web
+
+      - name: Create Android project
+        working-directory: Ghamis_Lab_System
         run: |
-          yes | sdkmanager --licenses || true
-
-      - name: Check Android project files
-        run: |
-          echo "Checking repository files..."
-          ls -la
-          if [ ! -f gradlew ]; then
-            echo "ERROR: gradlew is missing."
-            echo "This repository needs a complete Android Gradle project."
-            exit 1
-          fi
-          if [ ! -f settings.gradle ] && [ ! -f settings.gradle.kts ]; then
-            echo "ERROR: Android settings.gradle file is missing."
-            exit 1
-          fi
-          if [ ! -f app/build.gradle ] && [ ! -f app/build.gradle.kts ]; then
-            echo "ERROR: app/build.gradle file is missing."
-            exit 1
+          if [ ! -d android ]; then
+            npx cap add android
           fi
 
-      - name: Build debug APK
+      - name: Sync Android
+        working-directory: Ghamis_Lab_System
+        run: npx cap sync android
+
+      - name: Build APK
+        working-directory: Ghamis_Lab_System/android
         run: |
           chmod +x gradlew
           ./gradlew --no-daemon assembleDebug
@@ -57,6 +73,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Ghamis-Android-APK
-          path: app/build/outputs/apk/debug/*.apk
+          name: Ghamis-Lab-System-APK
+          path: Ghamis_Lab_System/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
