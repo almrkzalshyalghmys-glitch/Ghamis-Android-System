@@ -38,13 +38,16 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses
+        with:
+          packages: 'platform-tools'
+          accept-android-sdk-licenses: true
 
       - name: Install Android SDK packages
         run: |
-          sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+
+        
+
 
       - name: Install dependencies
         working-directory: Ghamis_Lab_System
